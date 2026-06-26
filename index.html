@@ -957,6 +957,13 @@
       const imageY = options.imageY || 5;
       const textOffset = options.textOffset || (docHasImages(missing) ? imageBoxWidth + 22 : 48);
       const nameFontSize = options.nameFontSize || 28;
+      const rowRadius = options.rowRadius || 6;
+      const rowFill = options.rowFill || "#FAFAF8";
+      const rowStroke = options.rowStroke || "#E2E2DD";
+      const rowShadow = options.rowShadow || "rgba(0, 0, 0, 0.035)";
+      const numberX = options.numberX ?? 16;
+      const numberColor = options.numberColor || COLORS.amber;
+      const numberFontSize = options.numberFontSize || 22;
       let currentY = y;
 
       missing.forEach((doc, index) => {
@@ -965,12 +972,19 @@
 
         if (box) {
           ctx.save();
-          ctx.shadowColor = "rgba(0, 0, 0, 0.035)";
+          ctx.shadowColor = rowShadow;
           ctx.shadowBlur = 10;
           ctx.shadowOffsetY = 4;
-          fillRoundRect(ctx, x - 16, currentY - rowHeight / 2, rowWidth, rowHeight, 6, "#FAFAF8", null);
+          fillRoundRect(ctx, x - 16, currentY - rowHeight / 2, rowWidth, rowHeight, rowRadius, rowFill, null);
           ctx.restore();
-          fillRoundRect(ctx, x - 16, currentY - rowHeight / 2, rowWidth, rowHeight, 6, null, "#E2E2DD");
+          fillRoundRect(ctx, x - 16, currentY - rowHeight / 2, rowWidth, rowHeight, rowRadius, null, rowStroke);
+        }
+
+        if (options.numbered) {
+          ctx.fillStyle = numberColor;
+          ctx.font = `700 ${numberFontSize}px "Noto Sans JP", sans-serif`;
+          ctx.textAlign = "left";
+          ctx.fillText(String(index + 1).padStart(2, "0"), x + numberX, currentY + numberFontSize * 0.22);
         }
 
         if (doc.image) {
@@ -982,7 +996,7 @@
           ctx.restore();
           fillRoundRect(ctx, x, currentY - imageBoxHeight / 2, imageBoxWidth, imageBoxHeight, 4, null, "#D9D9D4");
           drawImageContain(ctx, resolvedImage, x + imageX, currentY - imageBoxHeight / 2 + imageY, imageWidth, imageHeight);
-        } else if (options.numbered) {
+        } else if (options.numbered && !box) {
           ctx.fillStyle = COLORS.amber;
           ctx.font = '700 22px "Noto Serif JP", serif';
           ctx.textAlign = "center";
@@ -1053,58 +1067,62 @@
       ctx.fillStyle = COLORS.white;
       ctx.fillRect(0, 0, 800, 1000);
       const bgGradient = ctx.createLinearGradient(0, 0, 800, 1000);
-      bgGradient.addColorStop(0, "#F7F7F4");
+      bgGradient.addColorStop(0, "#EFF9F1");
       bgGradient.addColorStop(0.58, "#FFFFFF");
-      bgGradient.addColorStop(1, "#F2F2EF");
+      bgGradient.addColorStop(1, "#EEF8FB");
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, 800, 1000);
 
       ctx.save();
-      ctx.shadowColor = "rgba(0, 0, 0, 0.055)";
-      ctx.shadowBlur = 22;
-      ctx.shadowOffsetY = 10;
+      ctx.shadowColor = "rgba(41, 150, 88, 0.14)";
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 12;
       ctx.fillStyle = COLORS.white;
-      ctx.fillRect(54, 36, 692, 896);
+      fillRoundRect(ctx, 42, 42, 716, 900, 14, COLORS.white, null);
       ctx.restore();
 
       ctx.fillStyle = "#111111";
-      ctx.font = '700 32px "Noto Serif JP", serif';
+      ctx.font = '700 30px "Noto Serif JP", serif';
       ctx.textAlign = "left";
-      ctx.fillText("チェックリスト", 82, 90);
-      ctx.fillStyle = "#111111";
-      ctx.fillRect(82, 108, 118, 4);
-      const nameBottom = drawCaseTitle(ctx, info, 82, 164, 610, "#111111");
-      drawMeta(ctx, info, 82, nameBottom + 20, "#333333");
+      ctx.fillText("ご確認をお願いいたします", 72, 98);
+      ctx.font = '700 56px "Noto Sans JP", sans-serif';
+      const caseBottom = drawWrappedText(ctx, info.caseName || "案件名未入力", 72, 172, 640, 62);
+      ctx.fillStyle = "#333333";
+      ctx.font = '400 20px "Noto Sans JP", sans-serif';
+      ctx.fillText("不足している書類のみを一覧にしています。", 72, caseBottom + 24);
+      ctx.fillText("回収いただき、グループへ送付をお願いいたします。", 72, caseBottom + 54);
+      const ruleY = caseBottom + 92;
+      const ruleGradient = ctx.createLinearGradient(72, 0, 728, 0);
+      ruleGradient.addColorStop(0, COLORS.enepalGreen);
+      ruleGradient.addColorStop(1, COLORS.enepalCyan);
+      ctx.fillStyle = ruleGradient;
+      ctx.fillRect(72, ruleY, 656, 3);
 
       if (missing.length > 0) {
-        const listCardHeight = Math.min(626, Math.max(456, 260 + missing.length * 98));
-        ctx.save();
-        ctx.shadowColor = "rgba(0, 0, 0, 0.04)";
-        ctx.shadowBlur = 14;
-        ctx.shadowOffsetY = 6;
-        fillRoundRect(ctx, 82, 286, 636, listCardHeight, 10, "#FFFFFF", null);
-        ctx.restore();
-        fillRoundRect(ctx, 82, 286, 636, listCardHeight, 8, null, "#DADAD5");
-        ctx.fillStyle = "#111111";
-        ctx.font = '700 27px "Noto Sans JP", sans-serif';
-        ctx.fillText("ご確認をお願いいたします", 112, 354);
-        ctx.fillStyle = "#333333";
-        ctx.font = '400 20px "Noto Sans JP", sans-serif';
-        ctx.fillText("不足している書類のみを一覧にしています。", 112, 400);
-        ctx.fillText("回収いただき、グループへ送付をお願いいたします。", 112, 434);
-        drawMissingList(ctx, missing, 128, 504, {
+        const rowHeight = missing.length >= 5 ? 94 : 112;
+        const rowGap = missing.length >= 5 ? 12 : 24;
+        const startY = Math.max(356, ruleY + 60);
+        drawMissingList(ctx, missing, 142, startY, {
           box: true,
-          rowWidth: 544,
-          rowHeight: 98,
-          rowGap: 12,
-          imageBoxWidth: 146,
-          imageBoxHeight: 82,
-          imageWidth: 132,
-          imageHeight: 70,
-          imageX: 7,
-          imageY: 6,
-          textOffset: 174,
-          nameFontSize: 27
+          numbered: true,
+          numberX: -70,
+          numberColor: COLORS.enepalGreen,
+          numberFontSize: 38,
+          rowWidth: 586,
+          rowHeight,
+          rowGap,
+          rowRadius: 10,
+          rowFill: "#F8FDFB",
+          rowStroke: "#D9EADF",
+          rowShadow: "rgba(41, 150, 88, 0.07)",
+          imageBoxWidth: missing.length >= 5 ? 128 : 148,
+          imageBoxHeight: missing.length >= 5 ? 70 : 80,
+          imageWidth: missing.length >= 5 ? 112 : 128,
+          imageHeight: missing.length >= 5 ? 58 : 64,
+          imageX: 10,
+          imageY: 8,
+          textOffset: missing.length >= 5 ? 154 : 178,
+          nameFontSize: missing.length >= 5 ? 27 : 30
         });
       } else {
         ctx.save();
@@ -1116,6 +1134,11 @@
         fillRoundRect(ctx, 82, 286, 636, 566, 8, null, "#DADAD5");
         drawComplete(ctx, 400, 410, 570);
       }
+
+      ctx.fillStyle = "#333333";
+      ctx.font = '500 19px "Noto Sans JP", sans-serif';
+      ctx.textAlign = "left";
+      ctx.fillText(`日付：${displayDate(info.date)}`, 72, 876);
 
       drawFooter(ctx, "light");
     }
